@@ -2,8 +2,8 @@ name: Auto GPT Google Sheet
 
 on:
   schedule:
-    - cron: '32 8 * * *'  # 매일 오후 5시 32분 (UTC+9 → 8:32 UTC)
-  workflow_dispatch:      # 수동 실행 버튼 활성화
+    - cron: "40 8 * * *"  # 매일 오후 5시 40분 (KST, UTC+9)
+  workflow_dispatch:       # 수동 실행 버튼 활성화
 
 jobs:
   run-gpt:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
