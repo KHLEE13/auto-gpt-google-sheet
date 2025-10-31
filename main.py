@@ -1,58 +1,57 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-# In[1]:
-
-
 # ===============================================================
-# 🚗 GPT 자동차 추천 자동화 (월별 시트 분할 + 실시간 저장)
+# 🚗 GPT 자동차 추천 자동화 (월별 시트 분할 + 실시간 저장, GitHub Actions 호환)
 # ===============================================================
 
+import os
 import openai
 import gspread
 import time
+import json
+import requests
 from datetime import datetime
 from google.oauth2.service_account import Credentials
-import requests
-import json
 
-
-# In[2]:
-
-
-# -------------------------------
+# ===============================================================
 # 🔧 설정
-# -------------------------------
+# ===============================================================
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
-sh = gc.open_by_key(SPREADSHEET_ID)
-
-MODELS = ["gpt-4o-mini", "gpt-4o"]
-DELAY = 2  # 초 단위 (API 간 대기)
+DELAY = 2
 MAX_RETRY = 3
+MODELS = ["gpt-4o-mini", "gpt-4o"]
 
-# 서비스 계정 JSON 파일 경로
-SERVICE_ACCOUNT_FILE = "service_account.json"
+# ===============================================================
+# 🔐 인증 (로컬 or GitHub 자동 감지)
+# ===============================================================
+if os.getenv("GOOGLE_SERVICE_JSON"):
+    # GitHub Actions 환경에서 JSON을 Secret으로 로드
+    service_info = json.loads(os.getenv("GOOGLE_SERVICE_JSON"))
+    creds = Credentials.from_service_account_info(
+        service_info,
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+    )
+else:
+    # 로컬 실행용
+    SERVICE_ACCOUNT_FILE = "service_account.json"
+    creds = Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE,
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+    )
 
-
-# In[3]:
-
-
-# -------------------------------
-# 🔐 인증 & 구글 시트 연결
-# -------------------------------
-scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=scopes)
 gc = gspread.authorize(creds)
 spreadsheet = gc.open_by_key(SPREADSHEET_ID)
 
-
-# In[4]:
-
-
-# -------------------------------
-# 🗓️ 월별 시트 자동 생성 함수
-# -------------------------------
+# ===============================================================
+# 🗓️ 월별 시트 자동 생성
+# ===============================================================
 def get_monthly_worksheet():
     now = datetime.now()
     sheet_name = f"Answers_{now.year}_{now.month:02d}"
@@ -60,13 +59,10 @@ def get_monthly_worksheet():
 
     try:
         ws = spreadsheet.worksheet(sheet_name)
-        # 헤더가 없을 경우 자동 추가
-        existing = ws.get_all_values()
-        if len(existing) == 0:
+        if len(ws.get_all_values()) == 0:
             ws.append_row(headers)
             print(f"⚙️ 기존 시트에 헤더 추가됨: {sheet_name}")
     except gspread.exceptions.WorksheetNotFound:
-        # 시트 새로 생성 + 헤더 추가
         ws = spreadsheet.add_worksheet(title=sheet_name, rows="1000", cols=str(len(headers)))
         ws.append_row(headers)
         print(f"✅ 새 시트 생성됨: {sheet_name}")
@@ -74,14 +70,9 @@ def get_monthly_worksheet():
 
 ws = get_monthly_worksheet()
 
-
-# In[6]:
-
-
-# -------------------------------
+# ===============================================================
 # 💬 GPT 호출 함수 (재시도 포함)
-# -------------------------------
-
+# ===============================================================
 def call_gpt(model, prompt):
     url = "https://api.openai.com/v1/responses"
     headers = {
@@ -100,13 +91,11 @@ def call_gpt(model, prompt):
             res = requests.post(url, headers=headers, json=payload)
             if res.status_code == 200:
                 data = res.json()
-                # 응답 텍스트 추출
                 if "output_text" in data:
                     return data["output_text"].strip()
                 else:
-                    out = data.get("output", [])
                     text_blocks = []
-                    for o in out:
+                    for o in data.get("output", []):
                         for c in o.get("content", []):
                             if "text" in c:
                                 text_blocks.append(c["text"])
@@ -116,12 +105,8 @@ def call_gpt(model, prompt):
                 print(res.text)
         except Exception as e:
             print(f"[{model}] 요청 실패: {e}")
-        time.sleep(2 * (attempt + 1))  # 지수적 대기
+        time.sleep(2 * (attempt + 1))
     return "[오류: 응답 실패]"
-
-
-# In[7]:
-
 
 # -------------------------------
 # 🧾 예시 프롬프트 데이터 (테스트용)
