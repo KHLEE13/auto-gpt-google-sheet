@@ -2,7 +2,7 @@ name: Auto GPT Google Sheet
 
 on:
   schedule:
-    - cron: "45 8 * * *"  # 매일 오후 5시 45분 (KST)
+    - cron: '0 22 * * *'  # UTC 기준이므로, 한국시간(KST) 아침 7시 = UTC 22시 (전날)
   workflow_dispatch:       # 수동 실행도 허용
 
 jobs:
