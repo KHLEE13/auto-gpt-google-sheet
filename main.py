@@ -24,7 +24,8 @@ import json
 # 🔧 설정
 # -------------------------------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-SPREADSHEET_ID = "1ddf0GAQ86H6GHhKoztRnXfy8YfoivRdKU7L8KZ42NSw"  # URL의 /d/와 /edit 사이 부분
+SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+sh = gc.open_by_key(SPREADSHEET_ID)
 
 MODELS = ["gpt-4o-mini", "gpt-4o"]
 DELAY = 2  # 초 단위 (API 간 대기)
