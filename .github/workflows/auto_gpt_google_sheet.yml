@@ -2,8 +2,8 @@ name: Auto GPT Google Sheet
 
 on:
   schedule:
-    - cron: "11 11 * * *"  # 매일 오후 8시 11분 (KST, UTC+9)
-  workflow_dispatch:       # 수동 실행 버튼 활성화
+    - cron: "45 8 * * *"  # 매일 오후 5시 45분 (KST)
+  workflow_dispatch:       # 수동 실행도 허용
 
 jobs:
   run-gpt:
