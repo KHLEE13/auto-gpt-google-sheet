@@ -1,1 +1,37 @@
+name: Auto GPT Google Sheet Runner
 
+on:
+  schedule:
+    # 매일 오후 5시 10분 (한국시간 기준)
+    - cron: "10 8 * * *"
+  workflow_dispatch:  # 수동 실행도 가능하게 함
+
+jobs:
+  run_script:
+    runs-on: ubuntu-latest
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GOOGLE_APPLICATION_CREDENTIALS: service_account.json
+      SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Create Google service account file
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT }}' > service_account.json
+
+      - name: Run script
+        run: |
+          python main.py
